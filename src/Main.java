@@ -1,8 +1,11 @@
-import java.util.Objects;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
 
 class Student {
     private int numarMatricol;
@@ -16,6 +19,11 @@ class Student {
         this.nume = nume;
         this.formatieDeStudiu = formatieDeStudiu;
     }
+
+    public int getNumarMatricol() { return numarMatricol; }
+    public String getPrenume() { return prenume; }
+    public String getNume() { return nume; }
+    public String getFormatieDeStudiu() { return formatieDeStudiu; }
 
     @Override
     public boolean equals(Object o) {
@@ -31,45 +39,66 @@ class Student {
     public int hashCode() {
         return Objects.hash(prenume, nume, formatieDeStudiu);
     }
+
     @Override
     public String toString() {
         return "Student " + numarMatricol + " " + nume + " " + prenume + " " + formatieDeStudiu;
     }
+
+    public String toCsv() {
+        return numarMatricol + "," + prenume + "," + nume + "," + formatieDeStudiu;
+    }
 }
-    public class Main {
-        public static boolean cautaStudent_O1(Set<Student> setStudenti, Student studentCautat) {
-            return setStudenti.contains(studentCautat);
-        }
-        public static void main(String[] args) {
 
-            Student s1 = new Student(532, "Florin", "Popescu", "ISM21/2");
-            Student s2 = new Student(112, "Maria", "Popa", "TI21/1");
-            Student s3 = new Student(120, "Alis", "Popa", "TI21/2");
+public class Main {
 
-            List<Student> listaStudenti = new ArrayList<>();
+    public static void main(String[] args) {
+        String fisierIn = "src/studenti_in.txt";
+        String fisierOut = "src/student_in.txt";
+        String fisierOutSorted = "src/studenti_out_sorted.txt";
 
-            listaStudenti.add(s1);
-            listaStudenti.add(s2);
-            listaStudenti.add(s3);
+        List<Student> listaStudenti = new ArrayList<>();
 
-            System.out.println("a)");
-            for (Student s : listaStudenti) {
-                System.out.println(s);
+
+        try {
+            List<String> linii = Files.readAllLines(Paths.get(fisierIn));
+
+            for (String linie : linii) {
+                if (linie.trim().isEmpty()) continue;
+
+                String[] date = linie.split(",");
+                if (date.length == 4) {
+                    int nrMatricol = Integer.parseInt(date[0].trim());
+                    Student s = new Student(nrMatricol, date[1].trim(), date[2].trim(), date[3].trim());
+                    listaStudenti.add(s);
+                    System.out.println(s);
+                }
             }
-            System.out.println("b)");
-
-            Set<Student> setStudenti_O1 = new HashSet<>(listaStudenti);
-            Student studentC = new Student(112, "Maria", "Popa", "TI21/1");
-            Student studentB = new Student(120, "Alis", "Popa", "TI21/2");
 
 
-            boolean rezultatB = cautaStudent_O1(setStudenti_O1, studentB);
-            boolean rezultatC = cautaStudent_O1(setStudenti_O1, studentC);
-            System.out.println("gasit: " + rezultatB);
-            System.out.println("gasit: " + rezultatC);
+            listaStudenti.sort(Comparator.comparing(Student::getNume));
+
+
+            StringBuilder builder = new StringBuilder();
+            for(Student s : listaStudenti) {
+                builder.append(s.toCsv()).append(System.lineSeparator());
+            }
+            Files.writeString(Paths.get(fisierOut), builder.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+
+            listaStudenti.sort(Comparator
+                    .comparing(Student::getFormatieDeStudiu)
+                    .thenComparing(Student::getNume));
+
+
+            StringBuilder builderDublu = new StringBuilder();
+            for(Student s : listaStudenti) {
+                builderDublu.append(s.toCsv()).append(System.lineSeparator());
+            }
+            Files.writeString(Paths.get(fisierOutSorted), builderDublu.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
-
-
-
-
+}
