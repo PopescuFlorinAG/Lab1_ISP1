@@ -1,23 +1,24 @@
+import java.util.Objects;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
-class Student {
+ class Student {
     private int numarMatricol;
     private String prenume;
     private String nume;
     private String formatieDeStudiu;
+    private float nota;
 
     public Student(int numarMatricol, String prenume, String nume, String formatieDeStudiu) {
         this.numarMatricol = numarMatricol;
         this.prenume = prenume;
         this.nume = nume;
         this.formatieDeStudiu = formatieDeStudiu;
+        this.nota = 0.0f;
     }
 
     public int getNumarMatricol() { return numarMatricol; }
@@ -25,77 +26,89 @@ class Student {
     public String getNume() { return nume; }
     public String getFormatieDeStudiu() { return formatieDeStudiu; }
 
+    public float getNota() { return nota; }
+    public void setNota(float nota) { this.nota = nota; }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Student student = (Student) o;
-        return Objects.equals(prenume, student.prenume) &&
-                Objects.equals(nume, student.nume) &&
-                Objects.equals(formatieDeStudiu, student.formatieDeStudiu);
+        return numarMatricol == student.numarMatricol;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(prenume, nume, formatieDeStudiu);
+        return Objects.hash(numarMatricol);
     }
 
     @Override
     public String toString() {
-        return "Student " + numarMatricol + " " + nume + " " + prenume + " " + formatieDeStudiu;
-    }
-
-    public String toCsv() {
-        return numarMatricol + "," + prenume + "," + nume + "," + formatieDeStudiu;
+        return "Student " + numarMatricol + " | " + prenume + " " + nume + " | " + formatieDeStudiu + " | Nota: " + nota;
     }
 }
-
 public class Main {
 
+    public static float gasesteNota(String prenume, String nume, Map<Integer, Student> tineri) {
+        Map<String, Student> mapDupaNume = new HashMap<>();
+
+        for (Student s : tineri.values()) {
+            String cheieNume = s.getPrenume() + "-" + s.getNume();
+            mapDupaNume.put(cheieNume, s);
+        }
+
+        String cheieCautata = prenume + "-" + nume;
+        Student studentGasit = mapDupaNume.get(cheieCautata);
+
+        if (studentGasit != null) {
+            return studentGasit.getNota();
+        }
+
+        return 0.0f;
+    }
+
     public static void main(String[] args) {
-        String fisierIn = "src/studenti_in.txt";
-        String fisierOut = "src/student_in.txt";
-        String fisierOutSorted = "src/studenti_out_sorted.txt";
+        String fisierStudenti = "src/studenti_in.txt";
+        String fisierNote = "src/note_anon.txt";
 
-        List<Student> listaStudenti = new ArrayList<>();
-
+        Map<Integer, Student> mapStudenti = new HashMap<>();
 
         try {
-            List<String> linii = Files.readAllLines(Paths.get(fisierIn));
-
-            for (String linie : linii) {
-                if (linie.trim().isEmpty()) continue;
-
+            List<String> liniiStudenti = Files.readAllLines(Paths.get(fisierStudenti));
+            for (String linie : liniiStudenti) {
+                if(linie.trim().isEmpty()) continue;
                 String[] date = linie.split(",");
-                if (date.length == 4) {
-                    int nrMatricol = Integer.parseInt(date[0].trim());
-                    Student s = new Student(nrMatricol, date[1].trim(), date[2].trim(), date[3].trim());
-                    listaStudenti.add(s);
-                    System.out.println(s);
+                if(date.length == 4) {
+                    int nrM = Integer.parseInt(date[0].trim());
+                    Student s = new Student(nrM, date[1].trim(), date[2].trim(), date[3].trim());
+                    mapStudenti.put(nrM, s);
                 }
             }
 
+            List<String> liniiNote = Files.readAllLines(Paths.get(fisierNote));
+            for (String linie : liniiNote) {
+                if(linie.trim().isEmpty()) continue;
+                String[] notare = linie.split(",");
+                if(notare.length == 2) {
+                    int idCautat = Integer.parseInt(notare[0].trim());
+                    float notaGasita = Float.parseFloat(notare[1].trim());
 
-            listaStudenti.sort(Comparator.comparing(Student::getNume));
-
-
-            StringBuilder builder = new StringBuilder();
-            for(Student s : listaStudenti) {
-                builder.append(s.toCsv()).append(System.lineSeparator());
+                    Student DinMap = mapStudenti.get(idCautat);
+                    if (DinMap != null) {
+                        DinMap.setNota(notaGasita);
+                    }
+                }
             }
-            Files.writeString(Paths.get(fisierOut), builder.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-
-
-            listaStudenti.sort(Comparator
-                    .comparing(Student::getFormatieDeStudiu)
-                    .thenComparing(Student::getNume));
-
-
-            StringBuilder builderDublu = new StringBuilder();
-            for(Student s : listaStudenti) {
-                builderDublu.append(s.toCsv()).append(System.lineSeparator());
+            for (Student student : mapStudenti.values()) {
+                System.out.println(student);
             }
-            Files.writeString(Paths.get(fisierOutSorted), builderDublu.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+            float notaM = gasesteNota("Bianca", "Popescu", mapStudenti);
+            float notaN = gasesteNota("Florin", "Popescu", mapStudenti);
+
+            System.out.println("Bianca Popescu: " + notaM);
+            System.out.println("Florin Popescu: " + notaN);
+
 
         } catch (IOException e) {
             throw new RuntimeException(e);
