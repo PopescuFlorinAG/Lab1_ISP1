@@ -2,9 +2,11 @@ import java.util.Objects;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.StandardOpenOption;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+
 
  class Student {
     private int numarMatricol;
@@ -47,71 +49,78 @@ import java.util.Map;
         return "Student " + numarMatricol + " | " + prenume + " " + nume + " | " + formatieDeStudiu + " | Nota: " + nota;
     }
 }
-public class Main {
 
-    public static float gasesteNota(String prenume, String nume, Map<Integer, Student> tineri) {
-        Map<String, Student> mapDupaNume = new HashMap<>();
 
-        for (Student s : tineri.values()) {
-            String cheieNume = s.getPrenume() + "-" + s.getNume();
-            mapDupaNume.put(cheieNume, s);
+class StudentBursier extends Student {
+
+    private double cuantumBursa;
+
+    public StudentBursier(int numarMatricol, String prenume, String nume, String formatieDeStudiu, float nota, double cuantumBursa) {
+
+        super(numarMatricol, prenume, nume, formatieDeStudiu);
+
+        this.setNota(nota);
+
+        this.cuantumBursa = cuantumBursa;
+    }
+
+    public double getCuantumBursa() {
+        return cuantumBursa;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+
+        if (!super.equals(o)) return false;
+
+
+        StudentBursier that = (StudentBursier) o;
+        return Double.compare(that.cuantumBursa, cuantumBursa) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), cuantumBursa);
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() + " | Bursa: " + cuantumBursa + " RON";
+    }
+}
+
+
+class MainLab5 {
+
+    public static void writeToFile(String filename, Collection<? extends Student> colectieStudenti) {
+        StringBuilder builder = new StringBuilder();
+
+        for (Student s : colectieStudenti) {
+            builder.append(s.toString()).append(System.lineSeparator());
         }
 
-        String cheieCautata = prenume + "-" + nume;
-        Student studentGasit = mapDupaNume.get(cheieCautata);
+        try {
+            Files.writeString(Paths.get(filename), builder.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            System.out.println("V >salvat" + colectieStudenti.size() + filename);
+        } catch (IOException e) {
 
-        if (studentGasit != null) {
-            return studentGasit.getNota();
         }
-
-        return 0.0f;
     }
 
     public static void main(String[] args) {
-        String fisierStudenti = "src/studenti_in.txt";
-        String fisierNote = "src/note_anon.txt";
-
-        Map<Integer, Student> mapStudenti = new HashMap<>();
-
-        try {
-            List<String> liniiStudenti = Files.readAllLines(Paths.get(fisierStudenti));
-            for (String linie : liniiStudenti) {
-                if(linie.trim().isEmpty()) continue;
-                String[] date = linie.split(",");
-                if(date.length == 4) {
-                    int nrM = Integer.parseInt(date[0].trim());
-                    Student s = new Student(nrM, date[1].trim(), date[2].trim(), date[3].trim());
-                    mapStudenti.put(nrM, s);
-                }
-            }
-
-            List<String> liniiNote = Files.readAllLines(Paths.get(fisierNote));
-            for (String linie : liniiNote) {
-                if(linie.trim().isEmpty()) continue;
-                String[] notare = linie.split(",");
-                if(notare.length == 2) {
-                    int idCautat = Integer.parseInt(notare[0].trim());
-                    float notaGasita = Float.parseFloat(notare[1].trim());
-
-                    Student DinMap = mapStudenti.get(idCautat);
-                    if (DinMap != null) {
-                        DinMap.setNota(notaGasita);
-                    }
-                }
-            }
-            for (Student student : mapStudenti.values()) {
-                System.out.println(student);
-            }
-
-            float notaM = gasesteNota("Bianca", "Popescu", mapStudenti);
-            float notaN = gasesteNota("Florin", "Popescu", mapStudenti);
-
-            System.out.println("Bianca Popescu: " + notaM);
-            System.out.println("Florin Popescu: " + notaN);
 
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        Set<StudentBursier> bursieri = new HashSet<>();
+
+        bursieri.add(new StudentBursier(1025, "Andrei", "Popa", "ISM141/2", 8.70f, 725.50));
+        bursieri.add(new StudentBursier(1024, "Ioan", "Mihalcea", "ISM141/1", 9.80f, 801.10));
+        bursieri.add(new StudentBursier(1026, "Anamaria", "Prodan", "TI131/1", 8.90f, 745.50));
+        bursieri.add(new StudentBursier(1029, "Bianca", "Popescu", "TI131/1", 9.10f, 780.80)); // <- Am corectat și o mică virgulă pusă extra de pe fișa din lab fix la numele TI131/1
+
+        writeToFile("src/bursieri_out.txt", bursieri);
+
     }
 }
