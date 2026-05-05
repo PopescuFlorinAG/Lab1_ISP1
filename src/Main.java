@@ -1,24 +1,22 @@
 import java.util.Objects;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
-class Student {
-    protected int numarMatricol;
-    protected String prenume;
-    protected String nume;
-    protected String formatieDeStudiu;
-    protected double nota;
+final class Student {
 
-    public Student(int numarMatricol, String prenume, String nume, String formatieDeStudiu) {
+
+    private final int numarMatricol;
+    private final String prenume;
+    private final String nume;
+    private final String formatieDeStudiu;
+    private final double nota;
+
+    public Student(int numarMatricol, String prenume, String nume, String formatieDeStudiu, double nota) {
         this.numarMatricol = numarMatricol;
         this.prenume = prenume;
         this.nume = nume;
         this.formatieDeStudiu = formatieDeStudiu;
-        this.nota = 0.0;
+        this.nota = nota;
     }
 
     public int getNumarMatricol() { return numarMatricol; }
@@ -26,7 +24,6 @@ class Student {
     public String getNume() { return nume; }
     public String getFormatieDeStudiu() { return formatieDeStudiu; }
     public double getNota() { return nota; }
-    public void setNota(double nota) { this.nota = nota; }
 
     @Override
     public boolean equals(Object o) {
@@ -47,119 +44,59 @@ class Student {
     }
 }
 
-class StudentBursier extends Student {
-    private double cuantumBursa;
+class Main {
 
-    public StudentBursier(int numarMatricol, String prenume, String nume, String formatieDeStudiu, double nota, double bursa) {
-        super(numarMatricol, prenume, nume, formatieDeStudiu);
-        super.nota = nota;
-        this.cuantumBursa = bursa;
+    static Student schimbaFormatia(Student st, String nouaFormatieDeStudiu) {
+        return new Student(
+                st.getNumarMatricol(),
+                st.getPrenume(),
+                st.getNume(),
+                nouaFormatieDeStudiu,
+                st.getNota()
+        );
     }
 
-    public double getCuantumBursa() {
-        return cuantumBursa;
-    }
 
-    @Override
-    public String toString() {
-        String s = super.toString();
-        s += String.format(" [ Bursa: %6.2f RON ]", cuantumBursa);
-        return s;
-    }
+    static Set<Student> imparteInDouaFormatii(Set<Student> studenti, String formatia1, String formatia2) {
+        Set<Student> formatieNoua = new HashSet<>();
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        StudentBursier that = (StudentBursier) o;
-        return Double.compare(cuantumBursa, that.cuantumBursa) == 0;
-    }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), cuantumBursa);
-    }
-}
+        int limita = (studenti.size() + 1) / 2;
+        int contor = 0;
 
-class AplicatieCuBursa {
+        for (Student s : studenti) {
+            if (contor < limita) {
+                formatieNoua.add(schimbaFormatia(s, formatia1));
+            } else {
+                formatieNoua.add(schimbaFormatia(s, formatia2));
+            }
+            contor++;
+        }
+
+        return formatieNoua;
+    }
 
     public static void main(String[] args) {
-        AplicatieCuBursa instanta = new AplicatieCuBursa();
+        Set<Student> listaInitiala = new HashSet<>();
 
-        List<StudentBursier> lista = instanta.genereaza();
-        System.out.println("Lista inainte de sortare:");
-        for (StudentBursier student : lista) {
-            System.out.println(student);
+
+        listaInitiala.add(new Student(1024, "Ioan", "Mihalcea", "Veche", 9.80));
+        listaInitiala.add(new Student(1025, "Andrei", "Popa", "Veche", 8.70));
+        listaInitiala.add(new Student(1026, "Anamaria", "Prodan", "Veche", 8.90));
+        listaInitiala.add(new Student(1029, "Bianca", "Popescu", "Veche", 9.10));
+        listaInitiala.add(new Student(1030, "Mihai", "Ionescu", "Veche", 7.50));
+
+        System.out.println("--- LISTA INAINTE DE IMPARTIRE ---");
+        for (Student s : listaInitiala) {
+            System.out.println(s);
         }
 
-        System.out.println("--------------------------------------------------");
 
-        List<StudentBursier> sortata = instanta.sorteaza(lista);
-        System.out.println("Lista DUPA sortare:");
-        for (StudentBursier student : sortata) {
-            System.out.println(student);
-        }
-    }
+        Set<Student> listaImpartita = imparteInDouaFormatii(listaInitiala, "TI 211_1", "TI 211_2");
 
-    public List<StudentBursier> genereaza() {
-        List<StudentBursier> lista = new ArrayList<>();
-        lista.add(new StudentBursier(1025, "Andrei", "Popa", "ISM141/2", 8.70, 725.50));
-        lista.add(new StudentBursier(1024, "Ioan", "Mihalcea", "ISM141/1", 9.80, 801.10));
-        lista.add(new StudentBursier(1029, "Bianca", "Popescu", "TI131/1", 9.10, 780.80));
-        lista.add(new StudentBursier(1026, "Anamaria", "Prodan", "TI131/1", 8.90, 745.50));
-        lista.add(new StudentBursier(1029, "Bianca", "Popescu", "TI131/1", 9.10, 100.00));
-        return lista;
-    }
-
-    public List<StudentBursier> sorteaza(List<StudentBursier> lst) {
-        lst.sort(Comparator.comparing(StudentBursier::getFormatieDeStudiu)
-                .thenComparing(StudentBursier::getNume)
-                .thenComparing(StudentBursier::getPrenume)
-                .thenComparing(StudentBursier::getNota)
-                .thenComparing(StudentBursier::getCuantumBursa));
-        return lst;
-    }
-}
-
-class AplicatieCuBursaTest {
-
-    AplicatieCuBursa appCuBursa = new AplicatieCuBursa();
-
-    @Test
-    void testSorteaza() {
-        // Arrange
-        List<StudentBursier> listaInitiala = appCuBursa.genereaza();
-
-        // Act
-        List<StudentBursier> listaSortata = appCuBursa.sorteaza(listaInitiala);
-
-        // Assert - parcurgem lista și comparăm elementele 2 câte 2
-        for (int i = 0; i < listaSortata.size() - 1; i++) {
-            StudentBursier s1 = listaSortata.get(i);
-            StudentBursier s2 = listaSortata.get(i + 1);
-
-            int cmpFormatie = s1.getFormatieDeStudiu().compareTo(s2.getFormatieDeStudiu());
-            Assertions.assertTrue(cmpFormatie <= 0, "Eroare la formatie!");
-
-            if (cmpFormatie == 0) {
-                int cmpNume = s1.getNume().compareTo(s2.getNume());
-                Assertions.assertTrue(cmpNume <= 0, "Eroare la nume!");
-
-                if (cmpNume == 0) {
-                    int cmpPrenume = s1.getPrenume().compareTo(s2.getPrenume());
-                    Assertions.assertTrue(cmpPrenume <= 0, "Eroare la prenume!");
-
-                    if (cmpPrenume == 0) {
-                        int cmpNota = Double.compare(s1.getNota(), s2.getNota());
-                        Assertions.assertTrue(cmpNota <= 0, "Eroare la nota!");
-
-                        if (cmpNota == 0) {
-                            int cmpBursa = Double.compare(s1.getCuantumBursa(), s2.getCuantumBursa());
-                            Assertions.assertTrue(cmpBursa <= 0, "Eroare la cuantum bursa!");
-                        }
-                    }
-                }
-            }
+        System.out.println("\n--- LISTA DUPA IMPARTIREA IN CELE DOUA GRUPE ---");
+        for (Student s : listaImpartita) {
+            System.out.println(s);
         }
     }
 }
