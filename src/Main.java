@@ -1,102 +1,98 @@
-import java.util.Objects;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-final class Student {
+public class Laborator8Studenti {
 
+    public static void writeToXls(Set<Student> studenti, String fileName) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Lista Studenti");
 
-    private final int numarMatricol;
-    private final String prenume;
-    private final String nume;
-    private final String formatieDeStudiu;
-    private final double nota;
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("Nr Matricol");
+            headerRow.createCell(1).setCellValue("Prenume");
+            headerRow.createCell(2).setCellValue("Nume");
+            headerRow.createCell(3).setCellValue("Formatie Studiu");
+            headerRow.createCell(4).setCellValue("Nota");
 
-    public Student(int numarMatricol, String prenume, String nume, String formatieDeStudiu, double nota) {
-        this.numarMatricol = numarMatricol;
-        this.prenume = prenume;
-        this.nume = nume;
-        this.formatieDeStudiu = formatieDeStudiu;
-        this.nota = nota;
-    }
-
-    public int getNumarMatricol() { return numarMatricol; }
-    public String getPrenume() { return prenume; }
-    public String getNume() { return nume; }
-    public String getFormatieDeStudiu() { return formatieDeStudiu; }
-    public double getNota() { return nota; }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Student student = (Student) o;
-        return numarMatricol == student.numarMatricol;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(numarMatricol);
-    }
-
-    @Override
-    public String toString() {
-        return "Student " + numarMatricol + " | " + prenume + " " + nume + " | " + formatieDeStudiu + " | Nota: " + nota;
-    }
-}
-
-class Main {
-
-    static Student schimbaFormatia(Student st, String nouaFormatieDeStudiu) {
-        return new Student(
-                st.getNumarMatricol(),
-                st.getPrenume(),
-                st.getNume(),
-                nouaFormatieDeStudiu,
-                st.getNota()
-        );
-    }
-
-
-    static Set<Student> imparteInDouaFormatii(Set<Student> studenti, String formatia1, String formatia2) {
-        Set<Student> formatieNoua = new HashSet<>();
-
-
-        int limita = (studenti.size() + 1) / 2;
-        int contor = 0;
-
-        for (Student s : studenti) {
-            if (contor < limita) {
-                formatieNoua.add(schimbaFormatia(s, formatia1));
-            } else {
-                formatieNoua.add(schimbaFormatia(s, formatia2));
+            int rand = 1;
+            for (Student st : studenti) {
+                Row row = sheet.createRow(rand++);
+                row.createCell(0).setCellValue(st.getNumarMatricol());
+                row.createCell(1).setCellValue(st.getPrenume());
+                row.createCell(2).setCellValue(st.getNume());
+                row.createCell(3).setCellValue(st.getFormatieDeStudiu());
+                row.createCell(4).setCellValue(st.getNota());
             }
-            contor++;
+
+            try (FileOutputStream out = new FileOutputStream(fileName)) {
+                workbook.write(out);
+            }
+            System.out.println("Date transferate:" + fileName);
+
+        } catch (Exception e) {
+            System.err.println("Eroare " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
+    public static List<Student> readFromXls(String fileName) {
+        List<Student> listaCitita = new ArrayList<>();
+
+        try (FileInputStream in = new FileInputStream(fileName);
+             Workbook workbook = new XSSFWorkbook(in)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+
+            for (Row row : sheet) {
+
+                if (row.getRowNum() == 0) {
+                    continue;
+                }
+
+                int nrMatricol = (int) row.getCell(0).getNumericCellValue();
+                String prenume = row.getCell(1).getStringCellValue();
+                String nume = row.getCell(2).getStringCellValue();
+                String formatie = row.getCell(3).getStringCellValue();
+                double nota = row.getCell(4).getNumericCellValue();
+
+                Student st = new Student(nrMatricol, prenume, nume, formatie, nota);
+                listaCitita.add(st);
+            }
+
+            System.out.println("Datele importate" + fileName);
+
+        } catch (Exception e) {
+            System.err.println("Eroare " + e.getMessage());
+            e.printStackTrace();
         }
 
-        return formatieNoua;
+        return listaCitita;
     }
 
     public static void main(String[] args) {
-        Set<Student> listaInitiala = new HashSet<>();
+        String xlsFileName = "laborator8_students.xls";
 
+        Set<Student> studenti = new HashSet<>();
+        studenti.add(new Student(1024, "Ioan", "Mihalcea", "ISM141", 9.80));
+        studenti.add(new Student(1025, "Andrei", "Popa", "ISM141", 8.70));
+        studenti.add(new Student(1026, "Anamaria", "Prodan", "TI131", 8.90));
 
-        listaInitiala.add(new Student(1024, "Ioan", "Mihalcea", "Veche", 9.80));
-        listaInitiala.add(new Student(1025, "Andrei", "Popa", "Veche", 8.70));
-        listaInitiala.add(new Student(1026, "Anamaria", "Prodan", "Veche", 8.90));
-        listaInitiala.add(new Student(1029, "Bianca", "Popescu", "Veche", 9.10));
-        listaInitiala.add(new Student(1030, "Mihai", "Ionescu", "Veche", 7.50));
+        writeToXls(studenti, xlsFileName);
 
-        System.out.println("--- LISTA INAINTE DE IMPARTIRE ---");
-        for (Student s : listaInitiala) {
-            System.out.println(s);
-        }
+        List<Student> studentsFromXls = readFromXls(xlsFileName);
 
-
-        Set<Student> listaImpartita = imparteInDouaFormatii(listaInitiala, "TI 211_1", "TI 211_2");
-
-        System.out.println("\n--- LISTA DUPA IMPARTIREA IN CELE DOUA GRUPE ---");
-        for (Student s : listaImpartita) {
-            System.out.println(s);
+        System.out.println("\nStudenti:");
+        for (Student st : studentsFromXls) {
+            System.out.println(st);
         }
     }
 }
