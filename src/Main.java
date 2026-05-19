@@ -1,7 +1,10 @@
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 
 class Student {
     protected int numarMatricol;
@@ -25,34 +28,138 @@ class Student {
     public double getNota() { return nota; }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Student student = (Student) o;
-        return numarMatricol == student.numarMatricol;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(numarMatricol);
-    }
-
-    @Override
     public String toString() {
         return "Student " + numarMatricol + " | " + prenume + " " + nume + " | " + formatieDeStudiu + " | Nota: " + nota;
     }
 }
 
+interface IStudentiExport {
+    void doExport(List<Student> studenti);
+}
 
-public class Main {
+interface IStudentiImport {
+    List<Student> doImport();
+}
 
-    public static void main(String[] args) {
+class Exporter {
+    public void startExport(IStudentiExport strategy, List<Student> studenti) {
+        strategy.doExport(studenti);
+    }
+}
 
-        List<Student> studentiCuNote = Arrays.asList(
+class Importer {
+    public List<Student> startImport(IStudentiImport strategy) {
+        return strategy.doImport();
+    }
+}
+
+// a)
+class StudentiInConsola implements IStudentiExport {
+    @Override
+    public void doExport(List<Student> studenti) {
+        System.out.println("\nconsola ");
+        for (Student s : studenti) {
+            System.out.println(s);
+        }
+    }
+}
+
+// b)
+class StudentiInFisierText implements IStudentiExport {
+    private String fileName;
+    public StudentiInFisierText(String fileName) { this.fileName = fileName; }
+
+    @Override
+    public void doExport(List<Student> studenti) {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(fileName))) {
+            for (Student s : studenti) {
+                pw.println(s.getNumarMatricol() + ";" + s.getPrenume() + ";" + s.getNume() + ";" + s.getFormatieDeStudiu() + ";" + s.getNota());
+            }
+            System.out.println(fileName);
+        } catch (IOException e) { e.printStackTrace(); }
+    }
+}
+
+// c)
+class StudentiInFisierXlsx implements IStudentiExport {
+    private String fileName;
+    public StudentiInFisierXlsx(String fileName) { this.fileName = fileName; }
+
+    @Override
+    public void doExport(List<Student> studenti) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Studenti");
+            int rand = 0;
+            for (Student st : studenti) {
+                Row row = sheet.createRow(rand++);
+                row.createCell(0).setCellValue(st.getNumarMatricol());
+                row.createCell(1).setCellValue(st.getPrenume());
+                row.createCell(2).setCellValue(st.getNume());
+                row.createCell(3).setCellValue(st.getFormatieDeStudiu());
+                row.createCell(4).setCellValue(st.getNota());
+            }
+            try (FileOutputStream out = new FileOutputStream(fileName)) {
+                workbook.write(out);
+            }
+            System.out.println("XLSX" + fileName);
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+}
+
+// d)
+class StudentiDinFisierText implements IStudentiImport {
+    private String fileName;
+    public StudentiDinFisierText(String fileName) { this.fileName = fileName; }
+
+    @Override
+    public List<Student> doImport() {
+        List<Student> lista = new ArrayList<>();
+        try {
+            List<String> linii = Files.readAllLines(Paths.get(fileName));
+            for (String linie : linii) {
+                String[] p = linie.split(";");
+                lista.add(new Student(Integer.parseInt(p[0]), p[1], p[2], p[3], Double.parseDouble(p[4])));
+            }
+            System.out.println("TXT");
+        } catch (IOException e) { e.printStackTrace(); }
+        return lista;
+    }
+}
+
+// e)
+class StudentiDinFisierXlsx implements IStudentiImport {
+    private String fileName;
+    public StudentiDinFisierXlsx(String fileName) { this.fileName = fileName; }
+
+    @Override
+    public List<Student> doImport() {
+        List<Student> lista = new ArrayList<>();
+        try (FileInputStream in = new FileInputStream(fileName);
+             Workbook workbook = new XSSFWorkbook(in)) {
+            Sheet sheet = workbook.getSheetAt(0);
+            for (Row row : sheet) {
+                int id = (int) row.getCell(0).getNumericCellValue();
+                String prenume = row.getCell(1).getStringCellValue();
+                String nume = row.getCell(2).getStringCellValue();
+                String formatie = row.getCell(3).getStringCellValue();
+                double nota = row.getCell(4).getNumericCellValue();
+                lista.add(new Student(id, prenume, nume, formatie, nota));
+            }
+            System.out.println("XLSX");
+        } catch (Exception e) { e.printStackTrace(); }
+        return lista;
+    }
+}
+
+
+class AplicatieCuStrategy {
+     static void main(String[] args) {
+
+        List<Student> studenti = Arrays.asList(
                 new Student(1025, "Andrei", "Popa", "ISM141/2", 8.70),
-                new Student(1024, "Ioan", "Mihalcea", "ISM141/1", 10.0),
+                new Student(1024, "Ioan", "Mihalcea", "ISM141/1", 10),
                 new Student(1026, "Anamaria", "Prodan", "TI131/1", 8.90),
-                new Student(1029, "Bianca", "Popescu", "TI131/1", 10.0),
+                new Student(1029, "Bianca", "Popescu", "TI131/1", 10),
                 new Student(1029, "Maria", "Pana", "TI131/2", 4.10),
                 new Student(1029, "Gabriela", "Mohanu", "TI131/2", 7.33),
                 new Student(1029, "Marius", "Nasta", "TI131/2", 3.20),
@@ -60,40 +167,32 @@ public class Main {
                 new Student(1029, "Andrei", "Dobrescu", "TI131/2", 2.22)
         );
 
-        System.out.println("\na)");
-        studentiCuNote.stream()
-                .filter(s -> s.getNota() == 10.0)
-                .forEach(System.out::println);
+        Exporter exporter = new Exporter();
+        Importer importer = new Importer();
 
+        //Consola
+        IStudentiExport strategyConsole = new StudentiInConsola();
+        exporter.startExport(strategyConsole, studenti);
 
-        System.out.println("\nb) ");
-        studentiCuNote.stream()
-                .filter(s -> s.getNota() < 5.0)
-                .forEach(System.out::println);
+        //Txt
+        System.out.println("\n--- Testare Export/Import fisiere ---");
+        String textFile = "studentiStrategyText.txt";
+        IStudentiExport strategyFisierText = new StudentiInFisierText(textFile);
+        exporter.startExport(strategyFisierText, studenti);
 
+        //Xlsx
+        String excelFile = "studentiStrategyExcel.xlsx";
+        IStudentiExport strategyFisierExcel = new StudentiInFisierXlsx(excelFile);
+        exporter.startExport(strategyFisierExcel, studenti);
 
-        System.out.println("\nc) ");
-        List<Student> studentiActualizati = studentiCuNote.stream()
-                .map(s -> {
+        //Txt
+        IStudentiImport strategyImportText = new StudentiDinFisierText(textFile);
+        List<Student> studentiDinText = importer.startImport(strategyImportText);
 
-                    if (s.getNota() < 4.0) {
-                        return new Student(s.getNumarMatricol(), s.getPrenume(), s.getNume(), s.getFormatieDeStudiu(), 4.0);
-                    }
-                    return s;
-                })
-                .collect(Collectors.toList());
+        //Xlsx
+        IStudentiImport strategyImportExcel = new StudentiDinFisierXlsx(excelFile);
+        List<Student> studentiDinExcel = importer.startImport(strategyImportExcel);
 
-        studentiActualizati.forEach(System.out::println);
-
-        System.out.println("\nd)");
-        double sumaNotelor = studentiActualizati.stream()
-                .map(Student::getNota)
-                .reduce(0.0, (a, b) -> a + b);
-
-        System.out.println("Suma totală: " + String.format("%.2f", sumaNotelor));
-
-        System.out.println("\ne)");
-        double media = sumaNotelor / studentiActualizati.size();
-        System.out.println("Media calculată: " + String.format("%.2f", media));
+        System.out.println("\nVf" + studentiDinExcel.get(0));
     }
 }
